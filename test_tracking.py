@@ -22,6 +22,9 @@ redUpperA = (180, 255, 255)
 redLowerB = (0, 10, 80)
 redUpperB = (30, 255, 255)
 
+use_background_subtraction = False
+font_default = cv2.FONT_HERSHEY_PLAIN
+
 # Initialize video stream
 vs = PiVideoStream().start()
 cam = vs.getCamera()
@@ -42,20 +45,21 @@ first_frame = None
 # wait for background subtraction
 start_time = time.time();
 while True:
+    if not use_background_subtraction:
+        break
     frame = vs.read()
     frame = imutils.resize(frame, width = 400)
 
     disp = frame.copy()
 
     text = "WAIT FOR CALIBRATION"
-    font = cv2.FONT_HERSHEY_PLAIN
     scale = 1
     thickness = 2
     textsize= cv2.getTextSize(text, font, scale, thickness)[0]
     height, width = frame.shape[:2]
     textorg = ((width - textsize[0])/2, (height - textsize[1])/2)
     
-    cv2.putText(disp, text, textorg, font, scale, (255, 255, 255), thickness)
+    cv2.putText(disp, text, textorg, font_default, scale, (255, 255, 255), thickness)
 
     cv2.imshow("Calibrating...", disp)
 
@@ -72,13 +76,18 @@ while True:
         break;
 
 
+# initialize FPS counter
+start_time = time.time()
+frames = 0
+FPS = 0
+
 # main tracking loop
 while True:
     frame = vs.read()
     frame = imutils.resize(frame, width=400)
 
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    delta = cv2.absdiff(first_frame, gray)
+    #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    #delta = cv2.absdiff(first_frame, gray)
 
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -142,9 +151,20 @@ while True:
                 #cv2.drawContours(frame, [c], 0, (0, 0, 200), 2)
                 #cv2.circle(frame, center, 5, (0, 255, 0), -1)
 
+    # show FPS
+    cv2.putText(frame, "FPS: " + str(FPS), (0, 12), font_default, 1, (255, 255, 255), 1)
 
-    #cv2.imshow("Frame", frame)
-    cv2.imshow("Frame", delta)
+    # display the frame
+    cv2.imshow("Tracker", frame)
+
+    # update FPS counter
+    if time.time() - start_time >= 1:
+        start_time = time.time()
+        FPS = frames
+        frames = 0
+    else:
+        frames = frames + 1
+
 
     key = cv2.waitKey(1) & 0xFF
 
