@@ -36,11 +36,16 @@ g = cam.awb_gains
 cam.awb_mode = 'off'
 cam.awb_gains = g
 
+# initialize background subtraction frame
+first_frame = None
+
 # wait for background subtraction
 start_time = time.time();
 while True:
     frame = vs.read()
     frame = imutils.resize(frame, width = 400)
+
+    disp = frame.copy()
 
     text = "WAIT FOR CALIBRATION"
     font = cv2.FONT_HERSHEY_PLAIN
@@ -50,9 +55,9 @@ while True:
     height, width = frame.shape[:2]
     textorg = ((width - textsize[0])/2, (height - textsize[1])/2)
     
-    cv2.putText(frame, text, textorg, font, scale, (255, 255, 255), thickness)
+    cv2.putText(disp, text, textorg, font, scale, (255, 255, 255), thickness)
 
-    cv2.imshow("Calibrating...", frame)
+    cv2.imshow("Calibrating...", disp)
 
     key = cv2.waitKey(1) & 0xFF
 
@@ -62,6 +67,7 @@ while True:
 
     # after 2 seconds end
     if time.time() - start_time >= 2:
+        first_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         cv2.destroyAllWindows()
         break;
 
@@ -70,6 +76,9 @@ while True:
 while True:
     frame = vs.read()
     frame = imutils.resize(frame, width=400)
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    delta = cv2.absdiff(first_frame, gray)
 
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -135,7 +144,7 @@ while True:
 
 
     #cv2.imshow("Frame", frame)
-    cv2.imshow("Frame", frame)
+    cv2.imshow("Frame", delta)
 
     key = cv2.waitKey(1) & 0xFF
 
