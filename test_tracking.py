@@ -27,7 +27,7 @@ font_default = cv2.FONT_HERSHEY_PLAIN
 
 # Initialize video stream
 vs = PiVideoStream().start()
-cam = vs.getCamera()
+cam = vs.camera
 
 # Optimize camera for bright LEDs
 cam.iso = 100
