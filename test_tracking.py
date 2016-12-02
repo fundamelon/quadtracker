@@ -5,6 +5,88 @@ from picamera import PiCamera
 import imutils
 import time
 import cv2
+import numpy as np
+
+# heuristic function that determines the exact positions
+# of the quadcopter's props
+hist_A1 = []
+hist_A2 = []
+hist_B1 = []
+hist_B2 = []
+def process_points(bpts, rpts):
+
+    centroid = (0, 0)
+    A1 = (0, 0)
+    A2 = (0, 0)
+    B1 = (0, 0)
+    B2 = (0, 0)
+
+    # find an initial centroid
+    allpts = np.vstack((bpts, rpts))
+    if allpts.size == 0:
+        return centroid, A1, A2, B1, B2
+    length = allpts.shape[0]
+    sum_x = np.sum(allpts[:, 0])
+    sum_y = np.sum(allpts[:, 1])
+    raw_centroid = (sum_x/length, sum_y/length)
+    centroid = (int(sum_x/length), int(sum_y/length))
+
+    # TEMP: Reject if not all points perfectly visible...
+    if allpts.size != 8:
+        return centroid, A1, A2, B1, B2
+
+    # assign points
+    # 1. find points that are furthest right and/or down
+    furthest_right = 0
+    furthest_down = 0
+    furthest_left = 0
+    furthest_up = 0
+    for i, p in enumerate(allpts):
+        if p[0] > allpts[furthest_right][0]:
+            furthest_right = i
+        if p[1] > allpts[furthest_down][1]:
+            furthest_down = i
+        if p[0] < allpts[furthest_left][0]:
+            furthest_left = i
+        if p[1] < allpts[furthest_up][1]:
+            furthest_up = i
+    blue_right = allpts[furthest_right] in bpts
+    blue_down = allpts[furthest_down] in bpts
+
+    if blue_right and blue_down:
+        B2 = tuple(allpts[furthest_right])
+        A2 = tuple(allpts[furthest_down])
+
+        B1 = tuple(allpts[furthest_left])
+        A1 = tuple(allpts[furthest_up])
+
+    if blue_right and not blue_down:
+        A2 = tuple(allpts[furthest_right])
+        B1 = tuple(allpts[furthest_down])
+
+        A1 = tuple(allpts[furthest_left])
+        B2 = tuple(allpts[furthest_up])
+
+    if not blue_right and blue_down:
+        A1 = tuple(allpts[furthest_right])
+        B2 = tuple(allpts[furthest_down])
+
+        A2 = tuple(allpts[furthest_left]) 
+        B1 = tuple(allpts[furthest_up])
+
+    if not blue_right and not blue_down:
+        B1 = tuple(allpts[furthest_right])
+        A1 = tuple(allpts[furthest_down])
+
+        B2 = tuple(allpts[furthest_left])
+        A2 = tuple(allpts[furthest_up])
+
+    A1 = (int(A1[0]), int(A1[1])) 
+    A2 = (int(A2[0]), int(A2[1])) 
+    B1 = (int(B1[0]), int(B1[1])) 
+    B2 = (int(B2[0]), int(B2[1])) 
+    return centroid, A1, A2, B1, B2
+
 
 main_width = 128
 disp_width = 128
@@ -117,7 +199,10 @@ while True:
 
     rcnts = cv2.findContours(rmask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
 
-    center = None
+    cnt_center = None
+
+    bpts = np.empty(shape=[0, 2])
+    rpts = np.empty(shape=[0, 2])
 
     if len(bcnts) > 0:
         i = 2;
@@ -128,14 +213,15 @@ while True:
 
             ((x, y), radius) = cv2.minEnclosingCircle(c)
             M = cv2.moments(c)
-            center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+            cnt_center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+            bpts = np.append(bpts, [cnt_center], axis=0)
 
             if radius < 100:
                 p1 = (int(x) - rect_size, int(y) - rect_size)
                 p2 = (int(x) + rect_size, int(y) + rect_size)
                 cv2.rectangle(frame, p1, p2, (255, 0, 0), 1)
                 #cv2.drawContours(frame, [c], 0, (200, 0, 0), 2)
-                #cv2.circle(frame, center, 5, (0, 255, 0), -1)
+                #cv2.circle(frame, cnt_center, 5, (0, 255, 0), -1)
 
     if len(rcnts) > 0:
         i = 2;
@@ -146,17 +232,29 @@ while True:
 
             ((x, y), radius) = cv2.minEnclosingCircle(c)
             M = cv2.moments(c)
-            center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+            cnt_center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+            rpts = np.append(rpts, [cnt_center], axis=0)
 
             if radius < 100:
                 p1 = (int(x) - rect_size, int(y) - rect_size)
                 p2 = (int(x) + rect_size, int(y) + rect_size)
                 cv2.rectangle(frame, p1, p2, (0, 0, 255), 1)
                 #cv2.drawContours(frame, [c], 0, (0, 0, 200), 2)
-                #cv2.circle(frame, center, 5, (0, 255, 0), -1)
+                #cv2.circle(frame, cnt_center, 5, (0, 255, 0), -1)
+   
+    # process point results
+    # blue points are in bpts[], red points in rpts[]
+    center, posA1, posA2, posB1, posB2 = process_points(bpts, rpts) 
 
+    # draw representation of quad
+    cv2.circle(frame, center, 3, (255, 255, 255), 1)
+    cv2.putText(frame, "A1", posA1, font_default, 1, (255, 255, 255), 1)
+    cv2.putText(frame, "A2", posA2, font_default, 1, (255, 255, 255), 1)
+    cv2.putText(frame, "B1", posB1, font_default, 1, (255, 255, 255), 1)
+    cv2.putText(frame, "B2", posB2, font_default, 1, (255, 255, 255), 1)
+    
     # show FPS
-    cv2.putText(frame, "FPS: " + str(FPS), (0, 12), font_default, 1, (255, 255, 255), 1)
+    cv2.putText(frame, "FPS: " + str(FPS), (0, 12), font_default, 0, (255, 255, 255), 1)
 
     # display the frame
     frame = imutils.resize(frame, width = disp_width)
