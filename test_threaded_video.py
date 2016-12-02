@@ -12,7 +12,7 @@ time.sleep(2.0)
 
 while True:
     frame = vs.read()
-    frame = imutils.resize(frame, width=400)
+    frame = imutils.resize(frame, width=128)
 
     cv2.imshow("Frame", frame)
     key = cv2.waitKey(1) & 0xFF

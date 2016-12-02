@@ -6,13 +6,16 @@ import imutils
 import time
 import cv2
 
+main_width = 128
+disp_width = 128
+
 # nominal
 #blueLower = (100, 150, 0)
 #blueUpper = (140, 255, 255)
 # adjusted
 
 # Blue LED threshold values (HSV)
-blueLower = (80, 60, 60)
+blueLower = (80, 200, 40)
 blueUpper = (120, 255, 255)
 
 # Red LED threshold values (HSV)
@@ -48,7 +51,7 @@ while True:
     if not use_background_subtraction:
         break
     frame = vs.read()
-    frame = imutils.resize(frame, width = 400)
+    frame = imutils.resize(frame, width = main_width)
 
     disp = frame.copy()
 
@@ -61,6 +64,7 @@ while True:
     
     cv2.putText(disp, text, textorg, font_default, scale, (255, 255, 255), thickness)
 
+    disp = imutils.resize(disp, width = disp_width)
     cv2.imshow("Calibrating...", disp)
 
     key = cv2.waitKey(1) & 0xFF
@@ -84,7 +88,7 @@ FPS = 0
 # main tracking loop
 while True:
     frame = vs.read()
-    frame = imutils.resize(frame, width=400)
+    frame = imutils.resize(frame, width=main_width)
 
     #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     #delta = cv2.absdiff(first_frame, gray)
@@ -106,7 +110,7 @@ while True:
     rmask = cv2.erode(rmask, None, iterations=2)
     rmask = cv2.dilate(rmask, None, iterations=2)
 
-    rect_size = 20
+    rect_size = 8
 
     # Compute contours
     bcnts = cv2.findContours(bmask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
@@ -155,6 +159,7 @@ while True:
     cv2.putText(frame, "FPS: " + str(FPS), (0, 12), font_default, 1, (255, 255, 255), 1)
 
     # display the frame
+    frame = imutils.resize(frame, width = disp_width)
     cv2.imshow("Tracker", frame)
 
     # update FPS counter
