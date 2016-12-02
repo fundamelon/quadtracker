@@ -248,13 +248,41 @@ while True:
 
     # draw representation of quad
     cv2.circle(frame, center, 3, (255, 255, 255), 1)
+    cv2.circle(frame, posA1, 2, (255, 255, 255), 1)
+    cv2.circle(frame, posA2, 2, (255, 255, 255), 1)
+    cv2.circle(frame, posB1, 2, (255, 255, 255), 1)
+    cv2.circle(frame, posB2, 2, (255, 255, 255), 1)
     cv2.putText(frame, "A1", posA1, font_default, 1, (255, 255, 255), 1)
     cv2.putText(frame, "A2", posA2, font_default, 1, (255, 255, 255), 1)
     cv2.putText(frame, "B1", posB1, font_default, 1, (255, 255, 255), 1)
     cv2.putText(frame, "B2", posB2, font_default, 1, (255, 255, 255), 1)
+
+    # compute angle
+    fwd = ((posA2[0]+posB2[0])/2, (posA2[1]+posB2[1])/2)
+    if center[0] == fwd[0]:
+        heading = 180
+    else:
+        heading = np.arctan(float((center[1]) - fwd[1]) / float(center[0] - fwd[0])) * 57.2957795131
+
+
+    if posA1 == posA2 == posB1 == posB2 == (0, 0):
+        print "NO TRACK"
+    else:
+        print "TRACKING"
+        cv2.line(frame, center, posA1, (255, 255, 255), 1)
+        cv2.line(frame, center, posA2, (255, 255, 255), 1)
+        cv2.line(frame, center, posB1, (255, 255, 255), 1)
+        cv2.line(frame, center, posB2, (255, 255, 255), 1)
+        cv2.arrowedLine(frame, center, fwd, (150, 150, 150), 1)
+ 
+    # print console output
+    print "Position: " + str(center)
+    print "Heading: " + str(heading)[:6]
+    print "------------"
+
     
     # show FPS
-    cv2.putText(frame, "FPS: " + str(FPS), (0, 12), font_default, 0, (255, 255, 255), 1)
+    cv2.putText(frame, str(FPS), (0, 12), font_default, 1, (0, 80, 80), 1)
 
     # display the frame
     frame = imutils.resize(frame, width = disp_width)
