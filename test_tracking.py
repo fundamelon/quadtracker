@@ -7,6 +7,8 @@ import time
 import cv2
 import numpy as np
 
+print "OpenCV OK"
+print ("Version " + cv2.__version__)
 # heuristic function that determines the exact positions
 # of the quadcopter's props
 hist_A1 = []
@@ -87,7 +89,6 @@ def process_points(bpts, rpts):
     B2 = (int(B2[0]), int(B2[1])) 
     return centroid, A1, A2, B1, B2
 
-
 main_width = 128
 disp_width = 128
 
@@ -110,10 +111,12 @@ redUpperB = (30, 255, 255)
 use_background_subtraction = False
 font_default = cv2.FONT_HERSHEY_PLAIN
 
+print "Start video stream."
 # Initialize video stream
 vs = PiVideoStream().start()
 cam = vs.camera
 
+print "Configuring camera."
 # Optimize camera for bright LEDs
 cam.iso = 100
 cam.shutter_speed = 2000
