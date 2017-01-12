@@ -272,27 +272,28 @@ while True:
         heading = 180
     else:
         heading = np.arctan(float((center[1]) - fwd[1]) / float(center[0] - fwd[0])) * 57.2957795131
+ 
+    # add bottom bar
+    bottom_bar = np.zeros((10, frame.shape[1], 3), np.uint8)
+    frame = np.concatenate((frame, bottom_bar), axis = 0)
 
-
+    # print if tracking
     if posA1 == posA2 == posB1 == posB2 == (0, 0):
-        print "NO TRACK"
+        cv2.putText(frame, "NO TRACK", (90, 15), font_default, 1, (255, 255, 255), 1)
     else:
-        print "TRACKING"
+        cv2.putText(frame, "TRACKING", (90, 15), font_default, 1, (255, 255, 255), 1)
         cv2.line(frame, center, posA1, (255, 255, 255), 1)
         cv2.line(frame, center, posA2, (255, 255, 255), 1)
         cv2.line(frame, center, posB1, (255, 255, 255), 1)
         cv2.line(frame, center, posB2, (255, 255, 255), 1)
         cv2.arrowedLine(frame, center, fwd, (150, 150, 150), 1)
- 
-    # print console output
-    print "Position: " + str(center)
-    print "Heading: " + str(heading)[:6]
-    print "------------"
 
-    
+    # print more info
+    cv2.putText(frame, ("POS " + str(center)), (0, 180), font_default, 1, (255, 255, 255), 1)
+    cv2.putText(frame, ("HDG " + str(heading)[:4]), (0, 200), font_default, 1, (255, 255, 255), 1)
+    cv2.putText(frame, ("ALT ---"), (120, 180), font_default, 1, (255, 255, 255), 1)
     # show FPS
-    cv2.putText(frame, str(FPS), (0, 12), font_default, 1, (0, 80, 80), 1)
-
+    cv2.putText(frame, str(FPS), (0, 12), font_default, 1, (0, 120, 120), 1)
     # display the frame
     frame = imutils.resize(frame, width = disp_width)
     cv2.imshow("Tracker", frame)
