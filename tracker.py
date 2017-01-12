@@ -9,88 +9,8 @@ import numpy as np
 
 print "OpenCV OK"
 print ("Version " + cv2.__version__)
-# heuristic function that determines the exact positions
-# of the quadcopter's props
-hist_A1 = []
-hist_A2 = []
-hist_B1 = []
-hist_B2 = []
-def process_points(bpts, rpts):
-
-    centroid = (0, 0)
-    A1 = (0, 0)
-    A2 = (0, 0)
-    B1 = (0, 0)
-    B2 = (0, 0)
-
-    # find an initial centroid
-    allpts = np.vstack((bpts, rpts))
-    if allpts.size == 0:
-        return centroid, A1, A2, B1, B2
-    length = allpts.shape[0]
-    sum_x = np.sum(allpts[:, 0])
-    sum_y = np.sum(allpts[:, 1])
-    raw_centroid = (sum_x/length, sum_y/length)
-    centroid = (int(sum_x/length), int(sum_y/length))
-
-    # TEMP: Reject if not all points perfectly visible...
-    if allpts.size != 8:
-        return centroid, A1, A2, B1, B2
-
-    # assign points
-    # 1. find points that are furthest right and/or down
-    furthest_right = 0
-    furthest_down = 0
-    furthest_left = 0
-    furthest_up = 0
-    for i, p in enumerate(allpts):
-        if p[0] > allpts[furthest_right][0]:
-            furthest_right = i
-        if p[1] > allpts[furthest_down][1]:
-            furthest_down = i
-        if p[0] < allpts[furthest_left][0]:
-            furthest_left = i
-        if p[1] < allpts[furthest_up][1]:
-            furthest_up = i
-    blue_right = allpts[furthest_right] in bpts
-    blue_down = allpts[furthest_down] in bpts
-
-    if blue_right and blue_down:
-        B2 = tuple(allpts[furthest_right])
-        A2 = tuple(allpts[furthest_down])
-
-        B1 = tuple(allpts[furthest_left])
-        A1 = tuple(allpts[furthest_up])
-
-    if blue_right and not blue_down:
-        A2 = tuple(allpts[furthest_right])
-        B1 = tuple(allpts[furthest_down])
-
-        A1 = tuple(allpts[furthest_left])
-        B2 = tuple(allpts[furthest_up])
-
-    if not blue_right and blue_down:
-        A1 = tuple(allpts[furthest_right])
-        B2 = tuple(allpts[furthest_down])
-
-        A2 = tuple(allpts[furthest_left]) 
-        B1 = tuple(allpts[furthest_up])
-
-    if not blue_right and not blue_down:
-        B1 = tuple(allpts[furthest_right])
-        A1 = tuple(allpts[furthest_down])
-
-        B2 = tuple(allpts[furthest_left])
-        A2 = tuple(allpts[furthest_up])
-
-    A1 = (int(A1[0]), int(A1[1])) 
-    A2 = (int(A2[0]), int(A2[1])) 
-    B1 = (int(B1[0]), int(B1[1])) 
-    B2 = (int(B2[0]), int(B2[1])) 
-    return centroid, A1, A2, B1, B2
-
-main_width = 128
-disp_width = 128
+main_width = 256
+disp_width = 160
 
 # nominal
 #blueLower = (100, 150, 0)
@@ -103,9 +23,9 @@ blueUpper = (120, 255, 255)
 
 # Red LED threshold values (HSV)
 # Two ranges are needed for full coverage
-redLowerA = (160, 10, 80)
+redLowerA = (160, 100, 40)
 redUpperA = (180, 255, 255)
-redLowerB = (0, 10, 80)
+redLowerB = (0, 100, 40)
 redUpperB = (30, 255, 255)
 
 use_background_subtraction = False
@@ -118,8 +38,8 @@ cam = vs.camera
 
 print "Configuring camera."
 # Optimize camera for bright LEDs
-cam.iso = 100
-cam.shutter_speed = 2000
+cam.iso = 200
+cam.shutter_speed = 1500
 time.sleep(2.0)
 
 # Disable AWB algorithm for true color
@@ -170,6 +90,92 @@ start_time = time.time()
 frames = 0
 FPS = 0
 
+
+# heuristic function that determines the exact positions
+# of the quadcopter's props
+hist_A1 = []
+hist_A2 = []
+hist_B1 = []
+hist_B2 = []
+def process_points(bpts, rpts):
+
+    centroid = (0, 0)
+    A1 = (0, 0)
+    A2 = (0, 0)
+    B1 = (0, 0)
+    B2 = (0, 0)
+
+    # find an initial centroid
+    allpts = np.vstack((bpts, rpts))
+    if allpts.size == 0:
+        return centroid, A1, A2, B1, B2
+    length = allpts.shape[0]
+    sum_x = np.sum(allpts[:, 0])
+    sum_y = np.sum(allpts[:, 1])
+    raw_centroid = (sum_x/length, sum_y/length)
+    centroid = (int(sum_x/length), int(sum_y/length))
+
+    # TEMP: Reject if not all points perfectly visible...
+    if allpts.size != 8:
+        return centroid, A1, A2, B1, B2
+
+    # assign points
+    # Sort the points by relative position
+
+    furthest_right = 0
+    furthest_down = 0
+    furthest_left = 0
+    furthest_up = 0
+    for i, p in enumerate(allpts):
+        if p[0] > allpts[furthest_right][0]:
+            furthest_right = i
+        if p[1] > allpts[furthest_down][1]:
+            furthest_down = i
+        if p[0] < allpts[furthest_left][0]:
+            furthest_left = i
+        if p[1] < allpts[furthest_up][1]:
+            furthest_up = i
+    blue_right = allpts[furthest_right] in bpts
+    blue_down = allpts[furthest_down] in bpts
+
+    # Identify the points
+
+    if blue_right and blue_down:
+        B2 = tuple(allpts[furthest_right])
+        A2 = tuple(allpts[furthest_down])
+
+        B1 = tuple(allpts[furthest_left])
+        A1 = tuple(allpts[furthest_up])
+
+    if blue_right and not blue_down:
+        A2 = tuple(allpts[furthest_right])
+        B1 = tuple(allpts[furthest_down])
+
+        A1 = tuple(allpts[furthest_left])
+        B2 = tuple(allpts[furthest_up])
+
+    if not blue_right and blue_down:
+        A1 = tuple(allpts[furthest_right])
+        B2 = tuple(allpts[furthest_down])
+
+        A2 = tuple(allpts[furthest_left]) 
+        B1 = tuple(allpts[furthest_up])
+
+    if not blue_right and not blue_down:
+        B1 = tuple(allpts[furthest_right])
+        A1 = tuple(allpts[furthest_down])
+
+        B2 = tuple(allpts[furthest_left])
+        A2 = tuple(allpts[furthest_up])
+
+    # Package and return proper points
+    A1 = (int(A1[0]), int(A1[1])) 
+    A2 = (int(A2[0]), int(A2[1])) 
+    B1 = (int(B1[0]), int(B1[1])) 
+    B2 = (int(B2[0]), int(B2[1])) 
+    return centroid, A1, A2, B1, B2
+
+
 # main tracking loop
 while True:
     frame = vs.read()
@@ -185,14 +191,14 @@ while True:
 
     # Create blue mask
     bmask = cv2.inRange(hsv, blueLower, blueUpper)
-    bmask = cv2.erode(bmask, None, iterations=2)
+    #bmask = cv2.erode(bmask, None, iterations=2)
     bmask = cv2.dilate(bmask, None, iterations=2)
 
     # Create two red masks with two ranges, then combine them
     rmaskA = cv2.inRange(hsv, redLowerA, redUpperA)
     rmaskB = cv2.inRange(hsv, redLowerB, redUpperB)
     rmask = cv2.bitwise_or(rmaskA, rmaskB)
-    rmask = cv2.erode(rmask, None, iterations=2)
+    #rmask = cv2.erode(rmask, None, iterations=2)
     rmask = cv2.dilate(rmask, None, iterations=2)
 
     rect_size = 8
