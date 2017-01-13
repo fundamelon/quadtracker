@@ -9,7 +9,7 @@ import numpy as np
 
 print "OpenCV OK"
 print ("Version " + cv2.__version__)
-main_width = 256
+main_width = 160
 disp_width = 160
 
 # nominal
@@ -18,14 +18,14 @@ disp_width = 160
 # adjusted
 
 # Blue LED threshold values (HSV)
-blueLower = (80, 200, 40)
+blueLower = (80, 240, 40)
 blueUpper = (120, 255, 255)
 
 # Red LED threshold values (HSV)
 # Two ranges are needed for full coverage
-redLowerA = (160, 100, 40)
+redLowerA = (160, 150, 40)
 redUpperA = (180, 255, 255)
-redLowerB = (0, 100, 40)
+redLowerB = (0, 150, 40)
 redUpperB = (30, 255, 255)
 
 use_background_subtraction = False
@@ -175,6 +175,9 @@ def process_points(bpts, rpts):
     B2 = (int(B2[0]), int(B2[1])) 
     return centroid, A1, A2, B1, B2
 
+# drawing parameters
+rect_size = 4
+font_scale = 0.525
 
 # main tracking loop
 while True:
@@ -200,8 +203,6 @@ while True:
     rmask = cv2.bitwise_or(rmaskA, rmaskB)
     #rmask = cv2.erode(rmask, None, iterations=2)
     rmask = cv2.dilate(rmask, None, iterations=2)
-
-    rect_size = 8
 
     # Compute contours
     bcnts = cv2.findContours(bmask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
@@ -256,15 +257,19 @@ while True:
     center, posA1, posA2, posB1, posB2 = process_points(bpts, rpts) 
 
     # draw representation of quad
-    cv2.circle(frame, center, 3, (255, 255, 255), 1)
-    cv2.circle(frame, posA1, 2, (255, 255, 255), 1)
-    cv2.circle(frame, posA2, 2, (255, 255, 255), 1)
-    cv2.circle(frame, posB1, 2, (255, 255, 255), 1)
-    cv2.circle(frame, posB2, 2, (255, 255, 255), 1)
-    cv2.putText(frame, "A1", posA1, font_default, 1, (255, 255, 255), 1)
-    cv2.putText(frame, "A2", posA2, font_default, 1, (255, 255, 255), 1)
-    cv2.putText(frame, "B1", posB1, font_default, 1, (255, 255, 255), 1)
-    cv2.putText(frame, "B2", posB2, font_default, 1, (255, 255, 255), 1)
+    col_quadpoint = (255, 255, 255)
+    col_quadtext = (200, 200, 200)
+    col_quadline = (200, 200, 200)
+    col_heading = (150, 150, 150)
+    cv2.circle(frame, center, 2, col_quadpoint, 1)
+    cv2.circle(frame, posA1, 1, col_quadpoint, 1)
+    cv2.circle(frame, posA2, 1, col_quadpoint, 1)
+    cv2.circle(frame, posB1, 1, col_quadpoint, 1)
+    cv2.circle(frame, posB2, 1, col_quadpoint, 1)
+    cv2.putText(frame, "A1", posA1, font_default, font_scale, col_quadtext, 1)
+    cv2.putText(frame, "A2", posA2, font_default, font_scale, col_quadtext, 1)
+    cv2.putText(frame, "B1", posB1, font_default, font_scale, col_quadtext, 1)
+    cv2.putText(frame, "B2", posB2, font_default, font_scale, col_quadtext, 1)
 
     # compute angle
     fwd = ((posA2[0]+posB2[0])/2, (posA2[1]+posB2[1])/2)
@@ -279,21 +284,21 @@ while True:
 
     # print if tracking
     if posA1 == posA2 == posB1 == posB2 == (0, 0):
-        cv2.putText(frame, "NO TRACK", (90, 15), font_default, 1, (255, 255, 255), 1)
+        cv2.putText(frame, "NO TRACK", (55, 8), font_default, font_scale * 1.25, (255, 255, 255), 1)
     else:
-        cv2.putText(frame, "TRACKING", (90, 15), font_default, 1, (255, 255, 255), 1)
-        cv2.line(frame, center, posA1, (255, 255, 255), 1)
-        cv2.line(frame, center, posA2, (255, 255, 255), 1)
-        cv2.line(frame, center, posB1, (255, 255, 255), 1)
-        cv2.line(frame, center, posB2, (255, 255, 255), 1)
-        cv2.arrowedLine(frame, center, fwd, (150, 150, 150), 1)
+        cv2.putText(frame, "TRACKING", (55, 8), font_default, font_scale * 1.25, (255, 255, 255), 1)
+        cv2.line(frame, center, posA1, col_quadline, 1)
+        cv2.line(frame, center, posA2, col_quadline, 1)
+        cv2.line(frame, center, posB1, col_quadline, 1)
+        cv2.line(frame, center, posB2, col_quadline, 1)
+        cv2.arrowedLine(frame, center, fwd, col_quadline, 1)
 
     # print more info
-    cv2.putText(frame, ("POS " + str(center)), (0, 180), font_default, 1, (255, 255, 255), 1)
-    cv2.putText(frame, ("HDG " + str(heading)[:4]), (0, 200), font_default, 1, (255, 255, 255), 1)
-    cv2.putText(frame, ("ALT ---"), (120, 180), font_default, 1, (255, 255, 255), 1)
+    cv2.putText(frame, ("POS " + str(center)), (4, 114), font_default, font_scale, (255, 255, 255), 1)
+    cv2.putText(frame, ("HDG " + str(heading)[:6]), (4, 124), font_default, font_scale, (255, 255, 255), 1)
+    cv2.putText(frame, ("ALT ---"), (60, 114), font_default, font_scale, (255, 255, 255), 1)
     # show FPS
-    cv2.putText(frame, str(FPS), (0, 12), font_default, 1, (0, 120, 120), 1)
+    cv2.putText(frame, str(FPS), (4, 12), font_default, font_scale, (0, 120, 120), 1)
     # display the frame
     frame = imutils.resize(frame, width = disp_width)
     cv2.imshow("Tracker", frame)
