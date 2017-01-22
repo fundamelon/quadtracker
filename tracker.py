@@ -31,6 +31,9 @@ redUpperB = (30, 255, 255)
 use_background_subtraction = False
 font_default = cv2.FONT_HERSHEY_PLAIN
 
+# get screen overlays
+overlay1 = cv2.imread("img/overlay1.png")
+
 print "Start video stream."
 # Initialize video stream
 vs = PiVideoStream().start()
@@ -256,6 +259,13 @@ while True:
     # blue points are in bpts[], red points in rpts[]
     center, posA1, posA2, posB1, posB2 = process_points(bpts, rpts) 
 
+    height, width = frame.shape[:2]
+
+    # add overlay
+    overlay_alpha = 0.75
+    frame = cv2.add(overlay1, frame)
+    #frame = cv2.addWeighted(frame, overlay_alpha, overlay, 1 - overlay_alpha, 0, frame)
+
     # draw representation of quad
     col_quadpoint = (255, 255, 255)
     col_quadtext = (200, 200, 200)
@@ -270,6 +280,7 @@ while True:
     cv2.putText(frame, "A2", posA2, font_default, font_scale, col_quadtext, 1)
     cv2.putText(frame, "B1", posB1, font_default, font_scale, col_quadtext, 1)
     cv2.putText(frame, "B2", posB2, font_default, font_scale, col_quadtext, 1)
+    cv2.putText(frame, str(frame.shape), (20, 20), font_default, font_scale, (255, 255, 255), 1)
 
     # compute angle
     fwd = ((posA2[0]+posB2[0])/2, (posA2[1]+posB2[1])/2)
