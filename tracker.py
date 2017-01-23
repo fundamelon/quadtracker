@@ -6,6 +6,10 @@ import imutils
 import time
 import cv2
 import numpy as np
+import serial
+
+serial_port = serial.Serial("/dev/ttyUSB0", 115200, timeout=0)
+serial_port.isOpen()
 
 print "OpenCV OK"
 print ("Version " + cv2.__version__)
@@ -32,7 +36,7 @@ use_background_subtraction = False
 font_default = cv2.FONT_HERSHEY_PLAIN
 
 # get screen overlays
-overlay1 = cv2.imread("img/overlay1.png")
+overlay1 = cv2.imread("/home/pi/quadtracker/img/overlay1.png")
 
 print "Start video stream."
 # Initialize video stream
@@ -280,7 +284,10 @@ while True:
     cv2.putText(frame, "A2", posA2, font_default, font_scale, col_quadtext, 1)
     cv2.putText(frame, "B1", posB1, font_default, font_scale, col_quadtext, 1)
     cv2.putText(frame, "B2", posB2, font_default, font_scale, col_quadtext, 1)
-    cv2.putText(frame, str(frame.shape), (20, 20), font_default, font_scale, (255, 255, 255), 1)
+
+    # compute guidance position
+    pos_x = center[0] - width/2
+    pos_y = center[1] - height/2
 
     # compute angle
     fwd = ((posA2[0]+posB2[0])/2, (posA2[1]+posB2[1])/2)
@@ -293,10 +300,13 @@ while True:
     bottom_bar = np.zeros((10, frame.shape[1], 3), np.uint8)
     frame = np.concatenate((frame, bottom_bar), axis = 0)
 
+    tracking = 0
+
     # print if tracking
     if posA1 == posA2 == posB1 == posB2 == (0, 0):
         cv2.putText(frame, "NO TRACK", (55, 8), font_default, font_scale * 1.25, (255, 255, 255), 1)
     else:
+        tracking = 1
         cv2.putText(frame, "TRACKING", (55, 8), font_default, font_scale * 1.25, (255, 255, 255), 1)
         cv2.line(frame, center, posA1, col_quadline, 1)
         cv2.line(frame, center, posA2, col_quadline, 1)
@@ -322,11 +332,20 @@ while True:
     else:
         frames = frames + 1
 
+    # send out positional data
+    # format is START, MODE, X, Y, HEADING, END.
+    pos_data = ",7777," + str(tracking) + "," + str(pos_x) + "," + str(pos_y) + "," + str(heading) + ",9999,"
+    serial_port.write(pos_data)
+
+    # mirror serial in to console
+    bytesIn = serial_port.inWaiting();
+    print(serial_port.read(bytesIn));
 
     key = cv2.waitKey(1) & 0xFF
 
     if key == ord("q"):
         break
 
+serial_port.close()
 cv2.destroyAllWindows()
 vs.stop()
