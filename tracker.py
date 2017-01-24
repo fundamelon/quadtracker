@@ -7,6 +7,7 @@ import time
 import cv2
 import numpy as np
 import serial
+import math
 
 serial_port = serial.Serial("/dev/ttyUSB0", 115200, timeout=0)
 serial_port.isOpen()
@@ -182,6 +183,12 @@ def process_points(bpts, rpts):
     B2 = (int(B2[0]), int(B2[1])) 
     return centroid, A1, A2, B1, B2
 
+
+# Euclidean distance
+def dist(A, B):
+    return math.sqrt((B[0] - A[0])**2 + (B[1] - A[1])**2)
+
+
 # drawing parameters
 rect_size = 4
 font_scale = 0.525
@@ -289,6 +296,9 @@ while True:
     pos_x = center[0] - width/2
     pos_y = center[1] - height/2
 
+    # compute altitude
+    altitude = 80 - (dist(center, posA1) + dist(center, posA2) + dist(center, posB1) + dist(center, posB2))/4 
+
     # compute angle
     fwd = ((posA2[0]+posB2[0])/2, (posA2[1]+posB2[1])/2)
     if center[0] == fwd[0]:
@@ -317,7 +327,7 @@ while True:
     # print more info
     cv2.putText(frame, ("POS " + str(center)), (4, 114), font_default, font_scale, (255, 255, 255), 1)
     cv2.putText(frame, ("HDG " + str(heading)[:6]), (4, 124), font_default, font_scale, (255, 255, 255), 1)
-    cv2.putText(frame, ("ALT ---"), (60, 114), font_default, font_scale, (255, 255, 255), 1)
+    cv2.putText(frame, ("ALT " + str(altitude)[:6]), (60, 114), font_default, font_scale, (255, 255, 255), 1)
     # show FPS
     cv2.putText(frame, str(FPS), (4, 12), font_default, font_scale, (0, 120, 120), 1)
     # display the frame
@@ -333,8 +343,8 @@ while True:
         frames = frames + 1
 
     # send out positional data
-    # format is START, MODE, X, Y, HEADING, END.
-    pos_data = ",7777," + str(tracking) + "," + str(pos_x) + "," + str(pos_y) + "," + str(heading) + ",9999,"
+    # format is START, MODE, X, Y, HEADING, ALTITUDE, END.
+    pos_data = ",7777," + str(tracking) + "," + str(pos_x) + "," + str(pos_y) + "," + str(heading)[:8] + "," + str(altitude)[:8] + ",9999,"
     serial_port.write(pos_data)
 
     # mirror serial in to console
