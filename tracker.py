@@ -9,9 +9,6 @@ import numpy as np
 import serial
 import math
 
-serial_port = serial.Serial("/dev/ttyUSB0", 115200, timeout=0)
-serial_port.isOpen()
-
 print "OpenCV OK"
 print ("Version " + cv2.__version__)
 main_width = 160
@@ -38,6 +35,19 @@ font_default = cv2.FONT_HERSHEY_PLAIN
 
 # get screen overlays
 overlay1 = cv2.imread("/home/pi/quadtracker/img/overlay1.png")
+
+# get a serial port
+def getPort(portname, baud):
+    try:
+        return serial.Serial(portname, baud, timeout=0)
+    except:
+        print("SERIAL PORT NOT FOUND.")
+        return None
+
+serial_port = getPort("/dev/ttyUSB0", 115200)
+if(serial_port != None):
+    serial_port.isOpen()
+
 
 print "Start video stream."
 # Initialize video stream
@@ -139,9 +149,9 @@ def process_points(bpts, rpts):
             furthest_right = i
         if p[1] > allpts[furthest_down][1]:
             furthest_down = i
-        if p[0] < allpts[furthest_left][0]:
+        if p[0] <= allpts[furthest_left][0]:
             furthest_left = i
-        if p[1] < allpts[furthest_up][1]:
+        if p[1] <= allpts[furthest_up][1]:
             furthest_up = i
     blue_right = allpts[furthest_right] in bpts
     blue_down = allpts[furthest_down] in bpts
@@ -344,12 +354,13 @@ while True:
 
     # send out positional data
     # format is START, MODE, X, Y, HEADING, ALTITUDE, END.
-    pos_data = ",7777," + str(tracking) + "," + str(pos_x) + "," + str(pos_y) + "," + str(heading)[:8] + "," + str(altitude)[:8] + ",9999,"
-    serial_port.write(pos_data)
+    if(serial_port != None):
+        pos_data = ",7777," + str(tracking) + "," + str(pos_x) + "," + str(pos_y) + "," + str(int(heading)) + "," + str(int(altitude)) + ",9999,"
+        serial_port.write(pos_data)
 
-    # mirror serial in to console
-    bytesIn = serial_port.inWaiting();
-    print(serial_port.read(bytesIn));
+        # mirror serial in to console
+        bytesIn = serial_port.inWaiting();
+        print(serial_port.read(bytesIn));
 
     key = cv2.waitKey(1) & 0xFF
 
