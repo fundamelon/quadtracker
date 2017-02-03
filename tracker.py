@@ -367,10 +367,7 @@ while True:
 
     # compute angle
     fwd = ((posA2[0]+posB2[0])/2, (posA2[1]+posB2[1])/2)
-    if center[0] == fwd[0]:
-        heading = 180
-    else:
-        heading = np.arctan(float((center[1]) - fwd[1]) / float(center[0] - fwd[0])) * 57.2957795131
+    heading = get_ang((center[0], center[1] - 10), center, fwd)
  
     # add bottom bar
     bottom_bar = np.zeros((10, frame.shape[1], 3), np.uint8)

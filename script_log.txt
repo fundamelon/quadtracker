@@ -3,3 +3,4 @@ Version 3.2.0
 SERIAL PORT NOT FOUND.
 Start video stream.
 Configuring camera.
+Tracker: Fatal IO error 0 (Success) on X server :0.
