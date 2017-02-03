@@ -107,6 +107,68 @@ while True:
 start_time = time.time()
 frames = 0
 FPS = 0
+debug_text = ""
+
+
+# angle formed by A, C, with corner at point B
+def get_ang(A, B, C):
+    v0 = np.array(A) - np.array(B)
+    v1 = np.array(C) - np.array(B)
+    ang = np.math.atan2(np.linalg.det([v0, v1]), np.dot(v0, v1))
+    return np.degrees(ang)
+
+
+# function to find center of points
+def get_centroid(pts):
+    length = pts.shape[0]
+    sum_x = np.sum(pts[:, 0])
+    sum_y = np.sum(pts[:, 1])
+    raw_centroid = (sum_x/length, sum_y/length)
+    return (int(sum_x/length), int(sum_y/length))
+
+
+# alternative function to label points
+def process_points2(bpts, rpts):
+    centroid = (0, 0)
+    A1 = (0, 0)
+    A2 = (0, 0)
+    B1 = (0, 0)
+    B2 = (0, 0)
+
+    allpts = np.vstack((bpts, rpts))
+
+    # reject if data isn't complete
+    if allpts.size != 8 or bpts.size != 4 or rpts.size != 4:
+        return centroid, A1, A2, B1, B2
+
+    centroid = get_centroid(allpts)
+
+    # assign points
+    # get centroids of each color group
+    blue_centroid = get_centroid(bpts)
+    red_centroid = get_centroid(rpts)
+
+    # make decision based on angles
+    if(get_ang(centroid, blue_centroid, bpts[0]) >= 0):
+        A2 = bpts[0]
+        B2 = bpts[1]
+    else:
+        B2 = bpts[0]
+        A2 = bpts[1]
+    
+    if(get_ang(centroid, red_centroid, rpts[0]) >= 0):
+        A1 = rpts[0]
+        B1 = rpts[1]
+    else:
+        B1 = rpts[0]
+        A1 = rpts[1]
+ 
+    # Package and return proper points
+    A1 = (int(A1[0]), int(A1[1])) 
+    A2 = (int(A2[0]), int(A2[1])) 
+    B1 = (int(B1[0]), int(B1[1])) 
+    B2 = (int(B2[0]), int(B2[1])) 
+    return centroid, A1, A2, B1, B2
 
 
 # heuristic function that determines the exact positions
@@ -123,19 +185,13 @@ def process_points(bpts, rpts):
     B1 = (0, 0)
     B2 = (0, 0)
 
-    # find an initial centroid
     allpts = np.vstack((bpts, rpts))
-    if allpts.size == 0:
-        return centroid, A1, A2, B1, B2
-    length = allpts.shape[0]
-    sum_x = np.sum(allpts[:, 0])
-    sum_y = np.sum(allpts[:, 1])
-    raw_centroid = (sum_x/length, sum_y/length)
-    centroid = (int(sum_x/length), int(sum_y/length))
 
-    # TEMP: Reject if not all points perfectly visible...
-    if allpts.size != 8:
+    # reject if data isn't complete
+    if allpts.size != 8 or bpts.size != 4 or rpts.size != 4:
         return centroid, A1, A2, B1, B2
+
+    centroid = get_centroid(allpts)
 
     # assign points
     # Sort the points by relative position
@@ -278,7 +334,7 @@ while True:
    
     # process point results
     # blue points are in bpts[], red points in rpts[]
-    center, posA1, posA2, posB1, posB2 = process_points(bpts, rpts) 
+    center, posA1, posA2, posB1, posB2 = process_points2(bpts, rpts) 
 
     height, width = frame.shape[:2]
 
@@ -333,6 +389,8 @@ while True:
         cv2.line(frame, center, posB1, col_quadline, 1)
         cv2.line(frame, center, posB2, col_quadline, 1)
         cv2.arrowedLine(frame, center, fwd, col_quadline, 1)
+    
+    cv2.putText(frame, (str(debug_text)), (40, 40), font_default, font_scale, (255, 255, 255), 1)
 
     # print more info
     cv2.putText(frame, ("POS " + str(center)), (4, 114), font_default, font_scale, (255, 255, 255), 1)
