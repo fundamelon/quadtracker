@@ -48,7 +48,6 @@ serial_port = getPort("/dev/ttyUSB0", 115200)
 if(serial_port != None):
     serial_port.isOpen()
 
-
 print "Start video stream."
 # Initialize video stream
 vs = PiVideoStream().start()
@@ -129,17 +128,21 @@ def get_centroid(pts):
 
 # alternative function to label points
 def process_points2(bpts, rpts):
-    centroid = (0, 0)
-    A1 = (0, 0)
-    A2 = (0, 0)
-    B1 = (0, 0)
-    B2 = (0, 0)
-
-    allpts = np.vstack((bpts, rpts))
+    centroid = (0.0, 0.0)
+    A1 = (0.0, 0.0)
+    A2 = (0.0, 0.0)
+    B1 = (0.0, 0.0)
+    B2 = (0.0, 0.0)
 
     # reject if data isn't complete
-    if allpts.size != 8 or bpts.size != 4 or rpts.size != 4:
+    if bpts.size != 4 or rpts.size != 4:
         return centroid, A1, A2, B1, B2
+
+    # cast to float
+    bpts = np.array(bpts) + 0.
+    rpts = np.array(rpts) + 0.
+
+    allpts = np.vstack((bpts, rpts))
 
     centroid = get_centroid(allpts)
 
@@ -164,10 +167,10 @@ def process_points2(bpts, rpts):
         A1 = rpts[1]
  
     # Package and return proper points
-    A1 = (int(A1[0]), int(A1[1])) 
-    A2 = (int(A2[0]), int(A2[1])) 
-    B1 = (int(B1[0]), int(B1[1])) 
-    B2 = (int(B2[0]), int(B2[1])) 
+    #A1 = (int(A1[0]), int(A1[1])) 
+    #A2 = (int(A2[0]), int(A2[1])) 
+    #B1 = (int(B1[0]), int(B1[1])) 
+    #B2 = (int(B2[0]), int(B2[1])) 
     return centroid, A1, A2, B1, B2
 
 
@@ -334,7 +337,12 @@ while True:
    
     # process point results
     # blue points are in bpts[], red points in rpts[]
-    center, posA1, posA2, posB1, posB2 = process_points2(bpts, rpts) 
+    center_f, posA1_f, posA2_f, posB1_f, posB2_f = process_points2(bpts, rpts) 
+    center = (int(center_f[0]), int(center_f[1]))
+    posA1 = (int(posA1_f[0]), int(posA1_f[1]))
+    posA2 = (int(posA2_f[0]), int(posA2_f[1]))
+    posB1 = (int(posB1_f[0]), int(posB1_f[1]))
+    posB2 = (int(posB2_f[0]), int(posB2_f[1]))
 
     height, width = frame.shape[:2]
 
@@ -359,21 +367,23 @@ while True:
     cv2.putText(frame, "B2", posB2, font_default, font_scale, col_quadtext, 1)
 
     # compute guidance position
-    pos_x = center[0] - width/2
-    pos_y = center[1] - height/2
+    pos_x = center_f[0] - width/2.0
+    pos_y = center_f[1] - height/2.0
 
     # compute altitude
-    altitude = 80 - (dist(center, posA1) + dist(center, posA2) + dist(center, posB1) + dist(center, posB2))/4 
+    altitude = 80 - (dist(center_f, posA1_f) + dist(center_f, posA2_f) + dist(center_f, posB1_f) + dist(center_f, posB2_f))/4.0
 
     # compute angle
-    fwd = ((posA2[0]+posB2[0])/2, (posA2[1]+posB2[1])/2)
-    heading = get_ang((center[0], center[1] - 10), center, fwd)
+    fwd = ((posA2_f[0]+posB2_f[0])/2, (posA2_f[1]+posB2_f[1])/2)
+    heading = get_ang((center_f[0], center_f[1] - 10), center_f, fwd)
  
     # add bottom bar
     bottom_bar = np.zeros((10, frame.shape[1], 3), np.uint8)
     frame = np.concatenate((frame, bottom_bar), axis = 0)
 
     tracking = 0
+
+    debug_text = center_f[0]
 
     # print if tracking
     if posA1 == posA2 == posB1 == posB2 == (0, 0):
@@ -385,12 +395,12 @@ while True:
         cv2.line(frame, center, posA2, col_quadline, 1)
         cv2.line(frame, center, posB1, col_quadline, 1)
         cv2.line(frame, center, posB2, col_quadline, 1)
-        cv2.arrowedLine(frame, center, fwd, col_quadline, 1)
+        cv2.arrowedLine(frame, center, (int(fwd[0]), int(fwd[1])), col_quadline, 1)
     
     cv2.putText(frame, (str(debug_text)), (40, 40), font_default, font_scale, (255, 255, 255), 1)
 
     # print more info
-    cv2.putText(frame, ("POS " + str(center)), (4, 114), font_default, font_scale, (255, 255, 255), 1)
+    cv2.putText(frame, ("POS " + str(center_f)), (4, 114), font_default, font_scale, (255, 255, 255), 1)
     cv2.putText(frame, ("HDG " + str(heading)[:6]), (4, 124), font_default, font_scale, (255, 255, 255), 1)
     cv2.putText(frame, ("ALT " + str(altitude)[:6]), (60, 114), font_default, font_scale, (255, 255, 255), 1)
     # show FPS
@@ -410,12 +420,12 @@ while True:
     # send out positional data
     # format is START, MODE, X, Y, HEADING, ALTITUDE, END.
     if(serial_port != None):
-        pos_data = ",7777," + str(tracking) + "," + str(pos_x) + "," + str(pos_y) + "," + str(int(heading)) + "," + str(int(altitude)) + ",9999,"
+        pos_data = ",7777," + str(tracking) + "," + str(float(pos_x)) + "," + str(float(pos_y)) + "," + str(float(heading)) + "," + str(float(altitude)) + ",9999,"
         serial_port.write(pos_data)
 
         # mirror serial in to console
         bytesIn = serial_port.inWaiting();
-        print(serial_port.read(bytesIn));
+        if bytesIn: print(serial_port.read(bytesIn));
 
     key = cv2.waitKey(1) & 0xFF
 
