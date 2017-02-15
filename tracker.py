@@ -123,7 +123,7 @@ def get_centroid(pts):
     sum_x = np.sum(pts[:, 0])
     sum_y = np.sum(pts[:, 1])
     raw_centroid = (sum_x/length, sum_y/length)
-    return (int(sum_x/length), int(sum_y/length))
+    return (sum_x/length, sum_y/length)
 
 
 # alternative function to label points
@@ -383,7 +383,7 @@ while True:
 
     tracking = 0
 
-    debug_text = center_f[0]
+    debug_text = pos_x
 
     # print if tracking
     if posA1 == posA2 == posB1 == posB2 == (0, 0):
@@ -399,15 +399,31 @@ while True:
     
     cv2.putText(frame, (str(debug_text)), (40, 40), font_default, font_scale, (255, 255, 255), 1)
 
+    # data format is <S-M--.--X--.--Y--.--H--.--A--CE>.
+    data_string = 'S{}M{}X{}Y{}H{}A'.format(tracking, pos_x, pos_y, heading, altitude)
+    data_string += '{}CE'.format(sum([ord(c) for c in data_string]) % (2**16))
+
+    # send data over serial port
+    # TODO: Hot plug serial port
+    if(serial_port != None):
+        #data_string = ",7777," + str(tracking) + "," + str(float(pos_x)) + "," + str(float(pos_y)) + "," + str(float(heading)) + "," + str(float(altitude)) + ",9999,"
+        serial_port.write(data_string)
+
+        # mirror serial in to console
+        bytesIn = serial_port.inWaiting();
+        if bytesIn: print(serial_port.read(bytesIn));
+
+    #print data_string
+
     # print more info
-    cv2.putText(frame, ("POS " + str(center_f)), (4, 114), font_default, font_scale, (255, 255, 255), 1)
+    cv2.putText(frame, ("POS " + str(center)), (4, 114), font_default, font_scale, (255, 255, 255), 1)
     cv2.putText(frame, ("HDG " + str(heading)[:6]), (4, 124), font_default, font_scale, (255, 255, 255), 1)
     cv2.putText(frame, ("ALT " + str(altitude)[:6]), (60, 114), font_default, font_scale, (255, 255, 255), 1)
     # show FPS
     cv2.putText(frame, str(FPS), (4, 12), font_default, font_scale, (0, 120, 120), 1)
     # display the frame
     frame = imutils.resize(frame, width = disp_width)
-    cv2.imshow("Tracker", frame)
+    #cv2.imshow("Tracker", frame)
 
     # update FPS counter
     if time.time() - start_time >= 1:
@@ -416,17 +432,6 @@ while True:
         frames = 0
     else:
         frames = frames + 1
-
-    # send out positional data
-    # format is START, MODE, X, Y, HEADING, ALTITUDE, END.
-    if(serial_port != None):
-        pos_data = ",7777," + str(tracking) + "," + str(float(pos_x)) + "," + str(float(pos_y)) + "," + str(float(heading)) + "," + str(float(altitude)) + ",9999,"
-        serial_port.write(pos_data)
-
-        # mirror serial in to console
-        bytesIn = serial_port.inWaiting();
-        if bytesIn: print(serial_port.read(bytesIn));
-
     key = cv2.waitKey(1) & 0xFF
 
     if key == ord("q"):
