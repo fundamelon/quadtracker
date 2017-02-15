@@ -401,7 +401,7 @@ while True:
 
     # data format is <S-M--.--X--.--Y--.--H--.--A--CE>.
     data_string = 'S{}M{}X{}Y{}H{}A'.format(tracking, pos_x, pos_y, heading, altitude)
-    data_string += '{}CE'.format(sum([ord(c) for c in data_string]) % (2**16))
+    data_string += '{}CE'.format(sum([ord(c) for c in data_string]) % (256))
 
     # send data over serial port
     # TODO: Hot plug serial port
